@@ -360,11 +360,12 @@ copyGameRoomIdBtn.addEventListener('click', () => {
 });
 
 // 创建房间
-document.getElementById('create-room-btn').addEventListener('click', () => {
-    const username = document.getElementById('create-username').value.trim();
+document.getElementById('create-room-btn').addEventListener('click', function() {
+    console.log('点击了创建房间按钮');
     
+    const username = document.getElementById('create-username').value.trim();
     if (!username) {
-        alert('请输入您的昵称');
+        showMessage('请输入用户名', 'error');
         return;
     }
     
@@ -372,9 +373,22 @@ document.getElementById('create-room-btn').addEventListener('click', () => {
     const selectedAvatarElement = document.querySelector('.avatar-option.selected');
     const selectedAvatar = selectedAvatarElement ? selectedAvatarElement.getAttribute('data-avatar') : 'avatar1';
     
-    // 生成房间ID并显示在创建成功提示中
+    // 生成房间ID
     const roomId = generateRoomId();
-    document.getElementById('created-room-id').textContent = roomId;
+    console.log('生成的房间ID:', roomId);
+    
+    // 发送创建房间事件
+    console.log('正在发送创建房间事件...');
+    socket.emit('create_room', {
+        room_id: roomId,
+        username: username,
+        avatar: selectedAvatar,
+        small_blind: smallBlind,
+        big_blind: bigBlind,
+        all_in_rounds: allInRounds,
+        initial_chips: initialChips
+    });
+});
     
     // 保存用户选择的设置
     const smallBlind = parseInt(document.getElementById('small-blind').value) || 10;
