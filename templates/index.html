@@ -7,6 +7,85 @@
     <title>德州扑克 - 豪华赌场</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 基础样式 */
+        .setting-item {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .setting-label {
+            flex: 1;
+            font-weight: bold;
+        }
+        .setting-item input {
+            width: 120px;
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+        .waiting-player {
+            display: flex;
+            align-items: center;
+            background-color: rgba(255,255,255,0.1);
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+        .waiting-player-avatar {
+            margin-right: 10px;
+            width: 30px;
+            height: 30px;
+            background-color: #ff9500;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .host-tag {
+            background-color: #ff3b30;
+            color: white;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+        .start-game-info {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #888;
+        }
+        /* 玩家数量设置滑块样式 */
+        .player-count-slider {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            margin-top: 15px;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+        }
+        .slider-container input {
+            flex: 1;
+            margin: 0 10px;
+        }
+        .slider-value {
+            width: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #777;
+            margin-top: 5px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -55,6 +134,20 @@
                                     <span class="setting-label">初始筹码</span>
                                     <input type="number" id="initial-chips" placeholder="初始筹码" value="1000">
                                 </div>
+                                
+                                <!-- 玩家人数设置 -->
+                                <div class="player-count-slider">
+                                    <label>玩家人数设置: <span id="max-player-value">8</span> 人</label>
+                                    <div class="slider-container">
+                                        <span class="slider-value">4</span>
+                                        <input type="range" id="max-players" min="4" max="10" step="1" value="8">
+                                        <span class="slider-value">10</span>
+                                    </div>
+                                    <div class="slider-labels">
+                                        <span>最少4人</span>
+                                        <span>最多10人</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
@@ -99,13 +192,16 @@
                 </div>
                 
                 <div class="player-status">
-                    <p>当前玩家: <span id="current-player-count">1</span>/10</p>
+                    <p>当前玩家: <span id="current-player-count">1</span>/<span id="max-player-count">8</span></p>
                     <div id="waiting-players" class="waiting-players"></div>
                 </div>
                 
                 <div id="host-controls" class="host-controls">
                     <p><span class="host-tag">房主</span> 您可以决定何时开始游戏</p>
-                    <button id="start-game-btn" class="btn" disabled>开始游戏 (至少需要2位玩家)</button>
+                    <button id="start-game-btn" class="btn" disabled>开始游戏</button>
+                    <div class="start-game-info">
+                        <span id="player-requirement-message">游戏需要至少4名玩家才能开始</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -146,7 +242,8 @@
             room: '',
             avatar: 'avatar1',
             isHost: false,
-            players: []
+            players: [],
+            maxPlayers: 8
         };
         
         // 初始化Socket连接
@@ -175,6 +272,19 @@
                     document.getElementById(targetTab + '-tab').classList.add('active');
                 });
             });
+        }
+        
+        // 玩家人数滑块初始化
+        function initPlayerCountSlider() {
+            const slider = document.getElementById('max-players');
+            const display = document.getElementById('max-player-value');
+            
+            if (slider && display) {
+                slider.addEventListener('input', function() {
+                    display.textContent = this.value;
+                    gameState.maxPlayers = parseInt(this.value);
+                });
+            }
         }
         
         // 加入房间函数
@@ -214,10 +324,21 @@
                 return;
             }
             
+            const smallBlind = parseInt(document.getElementById('small-blind').value) || 10;
+            const bigBlind = parseInt(document.getElementById('big-blind').value) || 20;
+            const initialChips = parseInt(document.getElementById('initial-chips').value) || 1000;
+            const maxPlayers = parseInt(document.getElementById('max-players').value) || 8;
+            
             gameState.username = username;
+            gameState.maxPlayers = maxPlayers;
+            
             socket.emit('create_room', {
                 username: username,
-                avatar: gameState.avatar
+                avatar: gameState.avatar,
+                smallBlind: smallBlind,
+                bigBlind: bigBlind,
+                initialChips: initialChips,
+                max_players: maxPlayers
             });
         });
         
@@ -226,13 +347,18 @@
             gameState.room = data.room_id;
             gameState.isHost = true;
             gameState.players = data.players;
+            gameState.maxPlayers = data.max_players;
             
             // 更新房间号显示
             document.getElementById('room-id-value').textContent = data.room_id;
+            document.getElementById('max-player-count').textContent = data.max_players;
             
             // 隐藏登录界面，显示等待面板
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('waiting-panel').style.display = 'block';
+            
+            // 显示或隐藏房主控制
+            document.getElementById('host-controls').style.display = gameState.isHost ? 'block' : 'none';
             
             // 更新玩家列表
             updateWaitingPlayers(data.players);
@@ -245,18 +371,31 @@
             gameState.room = data.room_id;
             gameState.isHost = false;
             gameState.players = data.players;
+            gameState.maxPlayers = data.max_players;
             
             // 更新房间号显示
             document.getElementById('room-id-value').textContent = data.room_id;
+            document.getElementById('max-player-count').textContent = data.max_players;
             
             // 隐藏登录界面，显示等待面板
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('waiting-panel').style.display = 'block';
             
+            // 显示或隐藏房主控制
+            document.getElementById('host-controls').style.display = gameState.isHost ? 'block' : 'none';
+            
             // 更新玩家列表
             updateWaitingPlayers(data.players);
             
             alert(`成功加入房间: ${data.room_id}`);
+        });
+        
+        // 房间更新时
+        socket.on('room_update', function(data) {
+            gameState.players = data.players;
+            
+            // 更新玩家列表
+            updateWaitingPlayers(data.players);
         });
         
         // 更新等待玩家列表
@@ -283,13 +422,28 @@
                 container.appendChild(div);
             });
             
-            // 启用/禁用开始游戏按钮
+            // 更新开始游戏按钮状态
+            updateStartGameButton(players.length);
+        }
+        
+        // 更新开始游戏按钮状态
+        function updateStartGameButton(playerCount) {
             const startGameBtn = document.getElementById('start-game-btn');
+            const requirementMsg = document.getElementById('player-requirement-message');
+            
             if (startGameBtn && gameState.isHost) {
-                startGameBtn.disabled = players.length < 2;
-                startGameBtn.textContent = players.length < 2 
-                    ? '开始游戏(至少需要2名玩家)' 
-                    : '开始游戏';
+                // 只有房主且玩家数量达到4人才能启用开始按钮
+                const canStart = playerCount >= 4;
+                startGameBtn.disabled = !canStart;
+                
+                // 更新提示消息
+                if (requirementMsg) {
+                    if (playerCount < 4) {
+                        requirementMsg.textContent = '游戏需要至少4名玩家才能开始';
+                    } else {
+                        requirementMsg.textContent = '您可以随时开始游戏';
+                    }
+                }
             }
         }
         
@@ -302,6 +456,11 @@
             
             if (!gameState.isHost) {
                 alert('只有房主可以开始游戏');
+                return;
+            }
+            
+            if (gameState.players.length < 4) {
+                alert('至少需要4名玩家才能开始游戏');
                 return;
             }
             
@@ -333,36 +492,35 @@
             alert(data.message || '发生错误');
         });
         
-        // 初始化标签页
-        document.addEventListener('DOMContentLoaded', initTabs);
-        
-        // 头像选择功能
-        document.querySelectorAll('.avatar-option').forEach(option => {
-            option.addEventListener('click', function() {
-                const container = this.closest('.avatar-options');
-                container.querySelectorAll('.avatar-option').forEach(opt => {
-                    opt.classList.remove('selected');
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initTabs();
+            initPlayerCountSlider();
+            
+            // 头像选择功能
+            document.querySelectorAll('.avatar-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    const container = this.closest('.avatar-options');
+                    container.querySelectorAll('.avatar-option').forEach(opt => {
+                        opt.classList.remove('selected');
+                    });
+                    this.classList.add('selected');
+                    
+                    const avatar = this.getAttribute('data-avatar');
+                    if (avatar) {
+                        gameState.avatar = avatar;
+                    }
                 });
-                this.classList.add('selected');
-                
-                const avatar = this.getAttribute('data-avatar');
-                if (avatar) {
-                    gameState.avatar = avatar;
-                }
             });
-        });
-        
-        // 加入房间按钮的双重保障
-        if (window.addEventListener) {
-            // 确保不会丢失原有的监听器
+            
+            // 加入房间按钮的双重保障
             setTimeout(function() {
                 const joinBtn = document.getElementById('join-room-btn');
                 if (joinBtn) {
                     joinBtn.addEventListener('click', joinRoom);
                 }
             }, 500);
-        }
+        });
     </script>
 </body>
 </html>
-
