@@ -206,28 +206,63 @@
             </div>
         </div>
 
-        <!-- 游戏界面 (简化了，只保留必要部分) -->
-        <div id="game-screen" class="screen hidden">
-            <div class="game-header">
-                <div class="room-info">
-                    <span class="room-label">房间号: <span id="display-room-id">-</span></span>
-                </div>
-                <div class="game-status">
-                    <span id="game-status-text">游戏准备中...</span>
+        <!-- 游戏界面 -->
+<div id="game-screen" class="screen hidden">
+    <div class="game-header">
+        <div class="room-info">
+            <span class="room-label">房间号: <span id="display-room-id">-</span></span>
+        </div>
+        <div class="game-status">
+            <span id="game-status-text">游戏准备中...</span>
+        </div>
+        <div class="pot-container">
+            <div class="pot">底池: <span id="pot-amount">0</span></div>
+        </div>
+    </div>
+    
+    <div class="poker-table">
+        <div class="table-felt">
+            <div class="table-logo">
+                <i class="fas fa-crown"></i>
+                <span>豪华德州</span>
+            </div>
+            
+            <!-- 公共牌区域 -->
+            <div class="community-cards-container">
+                <div class="community-cards" id="community-cards">
+                    <!-- 公共牌将在这里动态添加 -->
                 </div>
             </div>
             
-            <div class="poker-table">
-                <div class="table-felt">
-                    <div class="table-logo">
-                        <i class="fas fa-crown"></i>
-                        <span>豪华德州</span>
-                    </div>
-                </div>
+            <!-- 玩家位置 -->
+            <div class="players-container" id="players-container">
+                <!-- 玩家将在这里动态添加 -->
             </div>
         </div>
     </div>
-
+    
+    <!-- 玩家的牌 -->
+    <div class="player-area">
+        <div class="player-info">
+            <div class="player-avatar">
+                <i id="player-avatar-icon" class="fas fa-user-tie"></i>
+            </div>
+            <div class="player-name" id="player-name">您的昵称</div>
+        </div>
+        <div class="player-cards" id="player-cards">
+            <!-- 玩家的两张牌将在这里显示 -->
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div class="action-buttons">
+            <button id="fold-btn" class="action-btn">弃牌</button>
+            <button id="check-btn" class="action-btn">看牌</button>
+            <button id="call-btn" class="action-btn">跟注</button>
+            <button id="raise-btn" class="action-btn">加注</button>
+            <button id="all-in-btn" class="action-btn">全下</button>
+        </div>
+    </div>
+</div>
     <!-- 备用加入房间入口 -->
     <a href="/diagnose" style="position: fixed; top: 20px; right: 20px; background-color: #ff3b30; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; font-weight: bold; z-index: 10000;">
         备用加入房间
