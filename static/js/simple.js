@@ -259,3 +259,154 @@ document.addEventListener('DOMContentLoaded', function() {
     log(`用户代理: ${navigator.userAgent}`);
     log(`屏幕尺寸: ${window.innerWidth}x${window.innerHeight}`);
 });
+// 通过HTTP加入房间（备用方案）
+async function joinRoomViaHttp() {
+    const username = document.getElementById('join-username').value.trim();
+    const roomId = document.getElementById('room-id').value.trim();
+    
+    if (!username) {
+        showMessage('请输入用户名', 'error');
+        return;
+    }
+    
+    if (!roomId) {
+        showMessage('请输入房间号', 'error');
+        return;
+    }
+    
+    try {
+        log(`通过HTTP请求加入房间 (用户: ${username}, 房间: ${roomId})`);
+        
+        const response = await fetch('/api/join-room', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, room_id: roomId })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            log(`成功加入房间: ${roomId}`);
+            showMessage(`成功加入房间: ${roomId}`, 'success');
+            
+            // 更新游戏状态
+            gameState.room = roomId;
+            gameState.username = username;
+            
+            // 更新房间ID显示
+            document.getElementById('room-id-value').textContent = roomId;
+            
+            // 隐藏登录界面
+            document.getElementById('login-screen').style.display = 'none';
+            
+            // 显示等待面板
+            document.getElementById('waiting-panel').style.display = 'block';
+            
+            // 更新玩家列表
+            updateWaitingPlayers(data.players);
+        } else {
+            showMessage(data.message || '加入房间失败', 'error');
+        }
+    } catch (error) {
+        log(`加入房间错误: ${error.message}`);
+        showMessage('加入房间失败，请稍后再试', 'error');
+    }
+}
+
+// 在Socket.IO事件监听部分添加加入房间事件处理
+socket.on('room_joined', function(data) {
+    log(`收到room_joined事件: ${JSON.stringify(data)}`);
+    
+    // 更新游戏状态
+    gameState.room = data.room_id;
+    
+    // 更新房间ID显示
+    document.getElementById('room-id-value').textContent = data.room_id;
+    
+    // 隐藏登录界面
+    document.getElementById('login-screen').style.display = 'none';
+    
+    // 显示等待面板
+    document.getElementById('waiting-panel').style.display = 'block';
+    
+    // 更新玩家列表
+    updateWaitingPlayers(data.players);
+    
+    showMessage(`成功加入房间: ${data.room_id}`, 'success');
+});
+
+// 在DOMContentLoaded事件中添加加入房间按钮的事件监听器
+document.addEventListener('DOMContentLoaded', function() {
+    // ... 现有代码 ...
+    
+    // 加入房间按钮事件
+    const joinRoomBtn = document.getElementById('join-room-btn');
+    if (joinRoomBtn) {
+        log('找到加入房间按钮，添加事件监听器');
+        joinRoomBtn.addEventListener('click', function() {
+            log('点击了加入房间按钮');
+            
+            const username = document.getElementById('join-username').value.trim();
+            const roomId = document.getElementById('room-id').value.trim();
+            
+            if (!username) {
+                showMessage('请输入用户名', 'error');
+                return;
+            }
+            
+            if (!roomId) {
+                showMessage('请输入房间号', 'error');
+                return;
+            }
+            
+            // 更新游戏状态
+            gameState.username = username;
+            gameState.room = roomId;
+            
+            // 判断是使用Socket.IO还是HTTP备用方案
+            if (socketConnected) {
+                log(`通过Socket.IO加入房间 (用户: ${username}, 房间: ${roomId})`);
+                socket.emit('join_room', { 
+                    username: username,
+                    room_id: roomId,
+                    avatar: gameState.avatar
+                });
+                
+                // 添加加入房间提示，因为有时事件可能没有触发回调
+                showMessage(`正在加入房间: ${roomId}...`, 'info');
+            } else {
+                log('Socket.IO未连接，使用HTTP备用方案');
+                joinRoomViaHttp();
+            }
+        });
+    } else {
+        log('错误：找不到加入房间按钮');
+        // 尝试通过其他选择器查找按钮并添加事件
+        const altJoinBtn = document.querySelector('.tab-pane button.gold-btn');
+        if (altJoinBtn) {
+            log('通过替代选择器找到加入按钮');
+            altJoinBtn.addEventListener('click', function() {
+                log('点击了替代加入按钮');
+                
+                const username = document.getElementById('join-username').value;
+                const roomId = document.getElementById('room-id').value;
+                
+                if (username && roomId) {
+                    if (socketConnected) {
+                        socket.emit('join_room', { 
+                            username: username,
+                            room_id: roomId,
+                            avatar: gameState.avatar
+                        });
+                    } else {
+                        joinRoomViaHttp();
+                    }
+                } else {
+                    showMessage('请输入用户名和房间号', 'error');
+                }
+            });
+        }
+    }
+    
+    // ... 现有代码 ...
+});
