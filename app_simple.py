@@ -116,6 +116,12 @@ def handle_create_room(data):
         logger.error(f"创建房间错误: {str(e)}", exc_info=True)
         emit_safely('error', {'message': str(e)})
 
+# 添加测试页面路由
+@app.route('/test')
+def test_page():
+    logger.info("加载测试页面")
+    return render_template('test.html')
+    
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     logger.info(f"启动应用，端口: {port}")
