@@ -542,3 +542,66 @@ label {
     font-family: monospace;
     line-height: 1.2;
 }
+
+@socketio.on('start_game')
+def handle_start_game(data):
+    room_id = data.get('room_id')
+    
+    if not room_id in rooms:
+        emit('error', {'message': '房间不存在'})
+        return
+    
+    # 检查玩家数量是否满足最低要求
+    if len(rooms[room_id]['players']) < 4:
+        emit('error', {'message': '至少需要4名玩家才能开始游戏'})
+        return
+    
+    # 创建扑克牌
+    suits = ['♥', '♦', '♠', '♣']
+    ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+    deck = [{'suit': suit, 'rank': rank} for suit in suits for rank in ranks]
+    
+    # 洗牌
+    import random
+    random.shuffle(deck)
+    
+    # 为玩家发牌
+    players = rooms[room_id]['players']
+    for player in players:
+        player['cards'] = [deck.pop() for _ in range(2)]
+    
+    # 发公共牌
+    community_cards = [deck.pop() for _ in range(5)]
+    
+    # 创建游戏状态
+    rooms[room_id]['game_state'] = {
+        'deck': deck,
+        'community_cards': community_cards,
+        'current_stage': 'pre-flop',  # pre-flop, flop, turn, river
+        'pot': 0,
+        'current_player_index': 0,
+        'small_blind': rooms[room_id]['settings']['smallBlind'],
+        'big_blind': rooms[room_id]['settings']['bigBlind']
+    }
+    
+    # 发送游戏开始事件，包含初始状态
+    emit('game_start', {
+        'players': [{
+            'username': p['username'],
+            'avatar': p['avatar'],
+            'isHost': p['isHost'],
+            # 只发送当前玩家的卡牌信息，其他玩家只发送数量
+            'cards': p['cards'] if p['username'] == request.sid else len(p['cards'])
+        } for p in players],
+        'community_cards': [],  # 游戏开始时不显示公共牌
+        'current_stage': 'pre-flop',
+        'pot': 0,
+        'small_blind': rooms[room_id]['settings']['smallBlind'],
+        'big_blind': rooms[room_id]['settings']['bigBlind']
+    }, to=room_id)
+    
+    # 向每个玩家单独发送他们的牌
+    for player in players:
+        emit('your_cards', {
+            'cards': player['cards']
+        }, to=player.get('sid', player['username']))
