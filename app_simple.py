@@ -30,9 +30,11 @@ rooms = {}
 # 主页
 @app.route('/')
 def index():
-    logger.info("加载主页")
     return render_template('index.html')
 
+@app.route('/diagnose')
+def diagnose():
+    return render_template('diagnose.html')
 # 测试页面
 @app.route('/test')
 def test_page():
