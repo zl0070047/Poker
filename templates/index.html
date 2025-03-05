@@ -192,6 +192,23 @@
 
     <!-- 加载Socket.IO库 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+
+    <!-- 添加备用加入房间入口 - 直接链接到诊断页面 -->
+    <a href="/diagnose" style="position: fixed; top: 20px; right: 20px; background-color: #ff3b30; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; font-weight: bold; z-index: 10000;">
+        备用加入房间入口
+    </a>
+    
+    <!-- 标签页切换专用脚本 -->
+    <script src="{{ url_for('static', filename='js/tabs.js') }}"></script>
+    
+    <!-- 标签页切换独立脚本 - 确保在任何情况下都能工作 -->
+    <script>
+     
+    </script>
+    
+    <!-- 主游戏脚本 -->
+    <script src="{{ url_for('static', filename='js/simple.js') }}"></script>
+
     
     <!-- 标签页切换独立脚本 - 确保在任何情况下都能工作 -->
     <script>
