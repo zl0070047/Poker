@@ -1,43 +1,173 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>简单连接测试</title>
+    <title>WebSocket连接测试</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { font-family: sans-serif; margin: 20px; }
-        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Helvetica, Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+        }
+        h1, h2 { margin-bottom: 16px; }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .status { 
+            padding: 15px; 
+            margin: 15px 0; 
+            border-radius: 8px; 
+            font-weight: 500;
+        }
         .success { background-color: #d4edda; color: #155724; }
         .error { background-color: #f8d7da; color: #721c24; }
-        .log { background-color: #f8f9fa; padding: 10px; height: 200px; overflow: auto; font-family: monospace; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        .log { 
+            background-color: #1d1d1f; 
+            color: #f5f5f7;
+            padding: 15px; 
+            height: 300px; 
+            overflow: auto; 
+            font-family: monospace; 
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+        .log-time {
+            color: #86868b;
+            margin-right: 10px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #007aff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button:hover {
+            background-color: #0062cc;
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .connection-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .info-item {
+            flex: 1;
+            padding: 10px;
+            background-color: rgba(255,255,255,0.5);
+            border-radius: 8px;
+            margin-right: 10px;
+        }
+        .info-label {
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: #86868b;
+        }
+        .info-value {
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
-    <h1>WebSocket连接测试</h1>
-    
-    <div id="status" class="status">等待连接...</div>
-    
-    <div>
-        <button id="connect-btn">测试连接</button>
-        <button id="ping-btn">发送Ping</button>
+    <div class="container">
+        <div class="card">
+            <h1>WebSocket连接测试</h1>
+            <p>此页面用于测试与服务器的WebSocket连接和基本功能。</p>
+            
+            <div id="status" class="status info">等待连接...</div>
+            
+            <div class="connection-info">
+                <div class="info-item">
+                    <div class="info-label">Socket ID</div>
+                    <div class="info-value" id="socket-id">未连接</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">传输模式</div>
+                    <div class="info-value" id="transport-mode">未知</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">延迟</div>
+                    <div class="info-value" id="ping-time">-</div>
+                </div>
+            </div>
+            
+            <div class="btn-group">
+                <button id="connect-btn">连接服务器</button>
+                <button id="ping-btn">发送Ping</button>
+                <button id="create-room-btn">创建测试房间</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>事件日志</h2>
+            <div id="log" class="log"></div>
+            <button id="clear-log">清空日志</button>
+        </div>
     </div>
-    
-    <h2>事件日志</h2>
-    <div id="log" class="log"></div>
     
     <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
     <script>
         const logElement = document.getElementById('log');
         const statusElement = document.getElementById('status');
+        const socketIdElement = document.getElementById('socket-id');
+        const transportModeElement = document.getElementById('transport-mode');
+        const pingTimeElement = document.getElementById('ping-time');
         
-        function log(message) {
+        let pingStartTime = 0;
+        
+        function log(message, type = 'info') {
             const entry = document.createElement('div');
-            entry.textContent = `${new Date().toISOString().substr(11, 8)} ${message}`;
+            entry.className = 'log-entry';
+            
+            const time = document.createElement('span');
+            time.className = 'log-time';
+            time.textContent = new Date().toISOString().substr(11, 8);
+            
+            const content = document.createElement('span');
+            content.textContent = message;
+            
+            entry.appendChild(time);
+            entry.appendChild(content);
+            
             logElement.appendChild(entry);
             logElement.scrollTop = logElement.scrollHeight;
+            
+            console.log(`[${type}] ${message}`);
         }
         
-        function updateStatus(message, isSuccess) {
+        function updateStatus(message, type = 'info') {
             statusElement.textContent = message;
-            statusElement.className = 'status ' + (isSuccess ? 'success' : 'error');
+            statusElement.className = 'status ' + type;
         }
         
         let socket;
@@ -46,17 +176,28 @@
             const socketUrl = window.location.origin;
             log(`尝试连接到: ${socketUrl}`);
             
-            updateStatus('正在连接...', false);
+            updateStatus('正在连接...', 'info');
+            
+            if (socket && socket.connected) {
+                socket.disconnect();
+            }
             
             socket = io(socketUrl, {
                 transports: ['websocket', 'polling'],
                 reconnection: true,
+                reconnectionAttempts: 5,
                 timeout: 10000
             });
             
             socket.on('connect', function() {
                 log(`连接成功 (ID: ${socket.id})`);
-                updateStatus('已连接', true);
+                updateStatus('已连接', 'success');
+                socketIdElement.textContent = socket.id;
+                
+                // 获取传输模式
+                const transport = socket.io.engine.transport.name;
+                transportModeElement.textContent = transport;
+                log(`使用传输模式: ${transport}`);
             });
             
             socket.on('connection_confirmed', function(data) {
@@ -64,43 +205,81 @@
             });
             
             socket.on('pong_client', function(data) {
-                log(`收到PONG: ${JSON.stringify(data)}`);
+                const pingTime = Date.now() - pingStartTime;
+                log(`收到PONG: ${JSON.stringify(data)} (${pingTime}ms)`);
+                pingTimeElement.textContent = `${pingTime}ms`;
             });
             
             socket.on('connect_error', function(error) {
                 log(`连接错误: ${error.message}`);
-                updateStatus(`连接错误: ${error.message}`, false);
+                updateStatus(`连接错误: ${error.message}`, 'error');
+                socketIdElement.textContent = '连接失败';
+                transportModeElement.textContent = '未知';
             });
             
             socket.on('disconnect', function() {
                 log('连接断开');
-                updateStatus('连接已断开', false);
+                updateStatus('连接已断开', 'warning');
+                socketIdElement.textContent = '未连接';
+                transportModeElement.textContent = '未知';
+                pingTimeElement.textContent = '-';
             });
             
             socket.on('error', function(data) {
                 log(`错误: ${JSON.stringify(data)}`);
+                updateStatus(`错误: ${data.message || '未知错误'}`, 'error');
+            });
+            
+            // 其他Socket.IO事件
+            socket.on('room_created', function(data) {
+                log(`房间创建成功: ${JSON.stringify(data)}`);
+                updateStatus(`房间创建成功: ${data.room_id}`, 'success');
             });
         }
         
         document.getElementById('connect-btn').addEventListener('click', function() {
-            if (socket) {
-                socket.disconnect();
-            }
             connectSocket();
         });
         
         document.getElementById('ping-btn').addEventListener('click', function() {
             if (socket && socket.connected) {
+                pingStartTime = Date.now();
                 log('发送PING');
                 socket.emit('ping_server');
             } else {
                 log('未连接，无法发送');
-                updateStatus('未连接，请先连接', false);
+                updateStatus('未连接，请先连接', 'warning');
             }
         });
         
-        // 自动连接
-        connectSocket();
+        document.getElementById('create-room-btn').addEventListener('click', function() {
+            if (socket && socket.connected) {
+                const testUsername = 'Test_' + Math.floor(Math.random() * 1000);
+                log(`创建测试房间 (用户: ${testUsername})`);
+                socket.emit('create_room', { 
+                    username: testUsername,
+                    avatar: 'avatar1'
+                });
+            } else {
+                log('未连接，无法创建房间');
+                updateStatus('未连接，请先连接', 'warning');
+            }
+        });
+        
+        document.getElementById('clear-log').addEventListener('click', function() {
+            logElement.innerHTML = '';
+            log('日志已清空');
+        });
+        
+        // 页面加载时尝试连接
+        window.addEventListener('DOMContentLoaded', function() {
+            log('页面加载完成');
+            log(`浏览器: ${navigator.userAgent}`);
+            log(`URL: ${window.location.href}`);
+            
+            // 自动连接
+            connectSocket();
+        });
     </script>
 </body>
 </html>
