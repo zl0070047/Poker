@@ -1,3 +1,42 @@
+// 修改 static/js/main.js 文件
+
+// 添加详细日志记录
+console.log('初始化Socket.IO连接...');
+
+// 当连接建立时的处理
+socket.on('connect', function() {
+    console.log('Socket.IO连接成功，ID:', socket.id);
+});
+
+// 监听创建房间事件
+socket.on('room_created', function(data) {
+    console.log('收到room_created事件:', data);
+    
+    // 确保这里的代码正确执行
+    if (!data || !data.room_id) {
+        console.error('收到无效的room_created数据');
+        showMessage('创建房间失败，请重试', 'error');
+        return;
+    }
+    
+    // 保存房间ID
+    gameState.room = data.room_id;
+    
+    // 更新房间ID显示
+    document.getElementById('room-id-value').textContent = data.room_id;
+    document.getElementById('display-room-id').textContent = data.room_id;
+    
+    // 切换到等待面板
+    switchToWaitingPanel(true);
+    
+    // 更新玩家列表
+    if (data.players) {
+        updateWaitingPlayers(data.players);
+    }
+    
+    console.log('成功切换到等待面板');
+});
+
 // 建立WebSocket连接
 // 在本地开发时使用相对路径，在生产环境使用绝对URL
 const socketUrl = (window.location.hostname === 'localhost' || 
