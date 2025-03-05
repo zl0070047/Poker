@@ -157,7 +157,7 @@
         if (debugInfo) {
             debugInfo.innerHTML = `
                 URL: ${window.location.href}<br>
-                Static Path: {{ url_for('static', filename='js/main.js') }}<br>
+                <script src="{{ url_for('static', filename='js/simple.js') }}"></script>
                 User Agent: ${navigator.userAgent}
             `;
         }
