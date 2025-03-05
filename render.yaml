@@ -3,15 +3,14 @@ services:
     name: poker-game
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --worker-class eventlet -w 1 --log-file=- -b 0.0.0.0:$PORT app:app
+    startCommand: gunicorn --worker-class eventlet -w 1 --log-file=- -b 0.0.0.0:$PORT app:app --timeout 120
     envVars:
       - key: SECRET_KEY
         generateValue: true
       - key: ENVIRONMENT
         value: production
-      - key: PYTHON_VERSION
-        value: 3.9.12
+      - key: PYTHONUNBUFFERED
+        value: "1"
     plan: free
     healthCheckPath: /health
-    healthCheckTimeout: 5
-    autoDeploy: true
+    healthCheckTimeout: 10
