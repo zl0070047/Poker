@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>德州扑克 - 诊断</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        button { padding: 10px; margin: 5px; cursor: pointer; }
+        input { padding: 8px; margin: 5px; width: 100%; }
+        #logs { background: #f0f0f0; padding: 10px; height: 300px; overflow: auto; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>简化诊断页面</h1>
+        
+        <div>
+            <label>用户名:</label>
+            <input type="text" id="username" placeholder="请输入用户名">
+        </div>
+        <div>
+            <label>房间号:</label>
+            <input type="text" id="roomId" placeholder="请输入房间号">
+        </div>
+        
+        <button id="createBtn">创建房间</button>
+        <button id="joinBtn">加入房间</button>
+        <button id="testBtn">测试连接</button>
+        
+        <div id="logs"></div>
+    </div>
+    
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <script>
+        const logs = document.getElementById('logs');
+        
+        function log(message) {
+            console.log(message);
+            const entry = document.createElement('div');
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logs.appendChild(entry);
+            logs.scrollTop = logs.scrollHeight;
+        }
+        
+        log('初始化诊断页面...');
+        
+        // 初始化Socket连接
+        let socket;
+        try {
+            socket = io();
+            socket.on('connect', () => log('Socket连接成功，ID: ' + socket.id));
+            socket.on('disconnect', () => log('Socket连接断开'));
+            socket.on('room_created', data => log('房间创建成功: ' + JSON.stringify(data)));
+            socket.on('room_joined', data => log('加入房间成功: ' + JSON.stringify(data)));
+            socket.on('error', data => log('错误: ' + JSON.stringify(data)));
+        } catch (err) {
+            log('Socket初始化失败: ' + err.message);
+        }
+        
+        // 绑定按钮事件
+        document.getElementById('createBtn').onclick = function() {
+            const username = document.getElementById('username').value.trim();
+            if (!username) {
+                alert('请输入用户名');
+                return;
+            }
+            
+            log('尝试创建房间: ' + username);
+            socket.emit('create_room', { username, avatar: 'avatar1' });
+        };
+        
+        document.getElementById('joinBtn').onclick = function() {
+            const username = document.getElementById('username').value.trim();
+            const roomId = document.getElementById('roomId').value.trim();
+            
+            if (!username || !roomId) {
+                alert('用户名和房间号不能为空');
+                return;
+            }
+            
+            log('尝试加入房间: ' + roomId);
+            socket.emit('join_room', { 
+                username: username, 
+                room_id: roomId,
+                avatar: 'avatar1'
+            });
+        };
+        
+        document.getElementById('testBtn').onclick = function() {
+            log('发送测试请求');
+            socket.emit('ping_server');
+        };
+        
+        log('页面初始化完成');
+    </script>
+</body>
+</html>
