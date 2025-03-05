@@ -821,6 +821,182 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         log('错误：找不到开始游戏按钮');
     }
+
+    /* 游戏界面样式 */
+.poker-table {
+    margin: 20px auto;
+    width: 90%;
+    max-width: 800px;
+    height: 400px;
+    border-radius: 200px;
+    background-color: #1b5e20;
+    border: 15px solid #4e342e;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    overflow: hidden;
+}
+
+.table-felt {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.table-logo {
+    position: absolute;
+    top: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: rgba(255,255,255,0.4);
+}
+
+.community-cards-container {
+    width: 70%;
+    height: 100px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.community-cards {
+    display: flex;
+    gap: 10px;
+}
+
+.players-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+}
+
+.player-position {
+    position: absolute;
+    width: 80px;
+    text-align: center;
+    color: white;
+}
+
+.player-position.position-0 { bottom: 10px; left: 50%; transform: translateX(-50%); }
+.player-position.position-1 { bottom: 10px; right: 20%; }
+.player-position.position-2 { top: 50%; right: 10px; transform: translateY(-50%); }
+.player-position.position-3 { top: 10px; right: 20%; }
+.player-position.position-4 { top: 10px; left: 50%; transform: translateX(-50%); }
+.player-position.position-5 { top: 10px; left: 20%; }
+.player-position.position-6 { top: 50%; left: 10px; transform: translateY(-50%); }
+.player-position.position-7 { bottom: 10px; left: 20%; }
+
+.player-avatar {
+    width: 40px;
+    height: 40px;
+    background-color: #333;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto;
+    border: 2px solid white;
+}
+
+.player-area {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.player-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.player-name {
+    margin-left: 10px;
+    font-weight: bold;
+}
+
+.player-cards {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.card {
+    width: 60px;
+    height: 90px;
+    background-color: white;
+    border-radius: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    position: relative;
+}
+
+.card.red {
+    color: red;
+}
+
+.card.black {
+    color: black;
+}
+
+.card .suit {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    font-size: 16px;
+}
+
+.card .rank {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.action-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 5px;
+    background-color: #007aff;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.action-btn:hover {
+    background-color: #0062cc;
+}
+
+.action-btn:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.pot-container {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: rgba(0,0,0,0.6);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-weight: bold;
+}
     
     // 添加页面信息
     log(`页面URL: ${window.location.href}`);
