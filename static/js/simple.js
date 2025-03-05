@@ -1,5 +1,5 @@
-// 德州扑克游戏简化版JavaScript
-console.log('加载简化版JavaScript...');
+// 德州扑克游戏简化版JavaScript - 增强版
+console.log('加载简化版JavaScript (增强版)...');
 
 // 游戏状态
 const gameState = {
@@ -27,13 +27,20 @@ function showMessage(message, type = 'info') {
                                       type === 'warning' ? '#ff9500' : '#007aff';
     messageDiv.style.color = 'white';
     messageDiv.style.zIndex = '9999';
+    messageDiv.style.boxShadow = '0 4px 10px rgba(0,0,0,0.2)';
+    messageDiv.style.fontSize = '14px';
+    messageDiv.style.fontWeight = '500';
     
     document.body.appendChild(messageDiv);
     
     setTimeout(() => {
         messageDiv.style.opacity = '0';
         messageDiv.style.transition = 'opacity 0.5s';
-        setTimeout(() => document.body.removeChild(messageDiv), 500);
+        setTimeout(() => {
+            if (document.body.contains(messageDiv)) {
+                document.body.removeChild(messageDiv);
+            }
+        }, 500);
     }, 3000);
 }
 
@@ -138,10 +145,69 @@ async function createRoomViaHttp() {
     }
 }
 
+// 定义一个独立的处理函数，便于重用和调试
+function handleJoinRoom() {
+    log('触发加入房间按钮点击事件');
+    showMessage('正在处理加入房间请求...', 'info');
+    
+    // 查找输入字段，同样使用多种查找方式
+    let usernameInput = document.getElementById('join-username');
+    if (!usernameInput) {
+        usernameInput = document.querySelector('input[placeholder*="用户名"], input[placeholder*="昵称"]');
+    }
+    
+    let roomIdInput = document.getElementById('room-id');
+    if (!roomIdInput) {
+        roomIdInput = document.querySelector('input[placeholder*="房间号"]');
+    }
+    
+    // 如果找不到输入字段，弹出提示框
+    const username = usernameInput ? usernameInput.value.trim() : prompt('请输入您的用户名:');
+    const roomId = roomIdInput ? roomIdInput.value.trim() : prompt('请输入房间号:');
+    
+    log(`加入房间信息 - 用户名: "${username}", 房间号: "${roomId}"`);
+    
+    if (!username) {
+        showMessage('请输入用户名', 'error');
+        return;
+    }
+    
+    if (!roomId) {
+        showMessage('请输入房间号', 'error');
+        return;
+    }
+    
+    // 更新游戏状态
+    gameState.username = username;
+    gameState.room = roomId;
+    
+    // 判断是使用Socket.IO还是HTTP备用方案
+    if (socketConnected) {
+        log(`通过Socket.IO加入房间 (用户: ${username}, 房间: ${roomId})`);
+        socket.emit('join_room', { 
+            username: username,
+            room_id: roomId,
+            avatar: gameState.avatar
+        });
+        
+        // 添加加入房间提示
+        showMessage(`正在加入房间: ${roomId}...`, 'info');
+    } else {
+        log('Socket.IO未连接，使用HTTP备用方案');
+        joinRoomViaHttp(username, roomId);
+    }
+}
+
 // 通过HTTP加入房间（备用方案）
-async function joinRoomViaHttp() {
-    const username = document.getElementById('join-username').value.trim();
-    const roomId = document.getElementById('room-id').value.trim();
+async function joinRoomViaHttp(username, roomId) {
+    // 如果没有提供参数，尝试从表单获取
+    if (!username || !roomId) {
+        const usernameInput = document.getElementById('join-username');
+        const roomIdInput = document.getElementById('room-id');
+        
+        username = username || (usernameInput ? usernameInput.value.trim() : '');
+        roomId = roomId || (roomIdInput ? roomIdInput.value.trim() : '');
+    }
     
     if (!username) {
         showMessage('请输入用户名', 'error');
@@ -448,7 +514,7 @@ function addTestButtons() {
     const testConnectButton = document.createElement('button');
     testConnectButton.textContent = '测试连接';
     testConnectButton.style.position = 'fixed';
-    testConnectButton.style.bottom = '90px';
+    testConnectButton.style.bottom = '130px';
     testConnectButton.style.right = '10px';
     testConnectButton.style.zIndex = '9999';
     testConnectButton.style.padding = '8px';
@@ -471,7 +537,7 @@ function addTestButtons() {
     const testJoinButton = document.createElement('button');
     testJoinButton.textContent = '测试加入房间';
     testJoinButton.style.position = 'fixed';
-    testJoinButton.style.bottom = '50px';
+    testJoinButton.style.bottom = '90px';
     testJoinButton.style.right = '10px';
     testJoinButton.style.zIndex = '9999';
     testJoinButton.style.padding = '8px';
@@ -501,6 +567,80 @@ function addTestButtons() {
     document.body.appendChild(testJoinButton);
 }
 
+// 添加明显的测试按钮来加入房间
+function addJoinRoomTestButton() {
+    const testButton = document.createElement('button');
+    testButton.textContent = '🔴 测试加入房间(点这里)';
+    testButton.style.position = 'fixed';
+    testButton.style.top = '100px';
+    testButton.style.left = '50%';
+    testButton.style.transform = 'translateX(-50%)';
+    testButton.style.padding = '15px 30px';
+    testButton.style.backgroundColor = '#ff3b30';
+    testButton.style.color = 'white';
+    testButton.style.border = 'none';
+    testButton.style.borderRadius = '10px';
+    testButton.style.fontWeight = 'bold';
+    testButton.style.fontSize = '18px';
+    testButton.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
+    testButton.style.zIndex = '10000';
+    
+    testButton.addEventListener('click', function() {
+        const roomId = prompt('请输入房间号:', '');
+        if (roomId) {
+            const username = prompt('请输入您的用户名:', 'Guest_' + Math.floor(Math.random() * 1000));
+            if (username) {
+                if (socketConnected) {
+                    socket.emit('join_room', {
+                        username: username,
+                        room_id: roomId,
+                        avatar: 'avatar1'
+                    });
+                    showMessage(`正在加入房间: ${roomId}`, 'info');
+                } else {
+                    joinRoomViaHttp(username, roomId);
+                }
+            }
+        }
+    });
+    
+    document.body.appendChild(testButton);
+    log('已添加测试加入房间按钮');
+}
+
+// 添加HTML结构分析功能，帮助诊断
+function analyzeHtmlStructure() {
+    log('开始分析HTML结构...');
+    
+    // 查找关键元素
+    const loginScreen = document.getElementById('login-screen');
+    const joinTab = document.getElementById('join-tab');
+    const joinUsername = document.getElementById('join-username');
+    const roomIdInput = document.getElementById('room-id');
+    const joinRoomBtn = document.getElementById('join-room-btn');
+    
+    log(`登录页面(#login-screen): ${loginScreen ? '找到' : '未找到'}`);
+    log(`加入标签页(#join-tab): ${joinTab ? '找到' : '未找到'}`);
+    log(`加入用户名输入(#join-username): ${joinUsername ? '找到' : '未找到'}`);
+    log(`房间号输入(#room-id): ${roomIdInput ? '找到' : '未找到'}`);
+    log(`加入房间按钮(#join-room-btn): ${joinRoomBtn ? '找到' : '未找到'}`);
+    
+    // 如果找到加入标签页，检查它的子元素
+    if (joinTab) {
+        const inputs = joinTab.querySelectorAll('input');
+        log(`加入标签页中的输入字段数量: ${inputs.length}`);
+        inputs.forEach((input, i) => {
+            log(`输入字段 ${i+1}: id="${input.id}", type="${input.type}", placeholder="${input.placeholder}"`);
+        });
+        
+        const buttons = joinTab.querySelectorAll('button');
+        log(`加入标签页中的按钮数量: ${buttons.length}`);
+        buttons.forEach((btn, i) => {
+            log(`按钮 ${i+1}: id="${btn.id}", class="${btn.className}", text="${btn.textContent.trim()}"`);
+        });
+    }
+}
+
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', function() {
     const debugPanel = addDebugPanel();
@@ -517,6 +657,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 添加测试按钮
     addTestButtons();
+    
+    // 添加明显的加入房间测试按钮
+    addJoinRoomTestButton();
+    
+    // 分析HTML结构
+    analyzeHtmlStructure();
     
     // 复制房间号按钮
     const copyRoomIdBtn = document.getElementById('copy-room-id');
@@ -570,51 +716,84 @@ document.addEventListener('DOMContentLoaded', function() {
         log('错误：找不到创建房间按钮');
     }
     
-    // 加入房间按钮事件
-    const joinRoomBtn = document.getElementById('join-room-btn');
-    if (joinRoomBtn) {
-        log('找到加入房间按钮，添加事件监听器');
-        joinRoomBtn.addEventListener('click', function() {
-            log('点击了加入房间按钮');
-            
-            const username = document.getElementById('join-username').value.trim();
-            const roomId = document.getElementById('room-id').value.trim();
-            
-            if (!username) {
-                showMessage('请输入用户名', 'error');
-                return;
-            }
-            
-            if (!roomId) {
-                showMessage('请输入房间号', 'error');
-                return;
-            }
-            
-            // 更新游戏状态
-            gameState.username = username;
-            gameState.room = roomId;
-            
-            // 判断是使用Socket.IO还是HTTP备用方案
-            if (socketConnected) {
-                log(`通过Socket.IO加入房间 (用户: ${username}, 房间: ${roomId})`);
-                socket.emit('join_room', { 
-                    username: username,
-                    room_id: roomId,
-                    avatar: gameState.avatar
-                });
-                
-                // 添加加入房间提示
-                showMessage(`正在加入房间: ${roomId}...`, 'info');
-            } else {
-                log('Socket.IO未连接，使用HTTP备用方案');
-                joinRoomViaHttp();
-            }
-        });
-    } else {
-        log('错误：找不到加入房间按钮');
+    // 加入房间按钮 - 使用多种查找方式确保能找到按钮
+    log('尝试查找加入房间按钮...');
+    let joinRoomBtn = document.getElementById('join-room-btn');
+    
+    if (!joinRoomBtn) {
+        log('通过ID未找到加入房间按钮，尝试使用其他选择器');
+        // 尝试通过选择器定位
+        joinRoomBtn = document.querySelector('button.gold-btn:not(#create-room-btn)');
     }
     
-     // 开始游戏按钮
+    if (!joinRoomBtn) {
+        log('通过选择器也未找到加入房间按钮，尝试查找所有按钮');
+        // 记录所有找到的按钮
+        const allButtons = document.querySelectorAll('button');
+        log(`页面中找到 ${allButtons.length} 个按钮：`);
+        allButtons.forEach((btn, index) => {
+            log(`按钮 ${index+1}: id="${btn.id}", class="${btn.className}", text="${btn.textContent.trim()}"`);
+        });
+        
+        // 尝试使用文本内容匹配
+        joinRoomBtn = Array.from(allButtons).find(btn => 
+            btn.textContent.includes('加入') || 
+            btn.textContent.includes('join')
+        );
+    }
+    
+    // 在页面上直接添加一个可靠的按钮（备用方案）
+    if (!joinRoomBtn) {
+        log('无法找到加入房间按钮，添加备用按钮');
+        
+        const backupBtn = document.createElement('button');
+        backupBtn.textContent = '📥 加入房间 (备用按钮)';
+        backupBtn.style.position = 'fixed';
+        backupBtn.style.top = '150px';
+        backupBtn.style.left = '50%';
+        backupBtn.style.transform = 'translateX(-50%)';
+        backupBtn.style.zIndex = '9999';
+        backupBtn.style.padding = '15px 30px';
+        backupBtn.style.backgroundColor = '#ff9500';
+        backupBtn.style.color = 'white';
+        backupBtn.style.border = 'none';
+        backupBtn.style.borderRadius = '10px';
+        backupBtn.style.fontWeight = 'bold';
+        backupBtn.style.fontSize = '16px';
+        backupBtn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+        
+        document.body.appendChild(backupBtn);
+        
+        joinRoomBtn = backupBtn;
+    }
+    
+    if (joinRoomBtn) {
+        log(`找到加入房间按钮: ${joinRoomBtn.outerHTML.substring(0, 100)}`);
+        
+        // 确保按钮可见且可点击
+        joinRoomBtn.style.pointerEvents = 'auto';
+        joinRoomBtn.style.opacity = '1';
+        
+        // 添加视觉反馈效果
+        joinRoomBtn.addEventListener('mousedown', function() {
+            this.style.transform = this.style.transform ? 
+                this.style.transform.replace('translateY(0)', 'translateY(2px)') : 'translateY(2px)';
+        });
+        
+        joinRoomBtn.addEventListener('mouseup', function() {
+            this.style.transform = this.style.transform ? 
+                this.style.transform.replace('translateY(2px)', 'translateY(0)') : '';
+        });
+        
+        // 绑定点击事件 - 同时使用onclick和addEventListener以确保可靠
+        joinRoomBtn.onclick = handleJoinRoom;
+        joinRoomBtn.addEventListener('click', handleJoinRoom);
+        log('成功绑定加入房间事件处理函数');
+    } else {
+        log('严重错误：无法找到或创建加入房间按钮');
+    }
+    
+    // 开始游戏按钮
     const startGameBtn = document.getElementById('start-game-btn');
     if (startGameBtn) {
         startGameBtn.addEventListener('click', function() {
