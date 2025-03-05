@@ -198,7 +198,7 @@ def handle_start_game(data):
     
     emit('game_start', {}, to=room_id)
    
-    // 游戏开始
+  #游戏开始
 
 socket.on('game_start', function() {
     document.getElementById('waiting-panel').style.display = 'none';
