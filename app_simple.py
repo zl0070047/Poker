@@ -19,9 +19,9 @@ socketio = SocketIO(
     app,
     cors_allowed_origins="*",
     async_mode='eventlet',
-    ping_timeout=None,  # 禁用ping超时
-    ping_interval=None,  # 禁用ping间隔
-    transports=['websocket', 'polling']  # 明确指定传输方式
+    ping_timeout=60,  # 改为60秒
+    ping_interval=25,  # 改为25秒
+    transports=['websocket', 'polling']
 )
 
 # 房间数据
