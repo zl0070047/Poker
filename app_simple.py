@@ -29,6 +29,11 @@ def api_join_room():
     if room_id not in rooms:
         return jsonify({"success": False, "message": "房间不存在"})
     
+    # 检查房间是否已满
+    max_players = rooms[room_id].get('max_players', 10)
+    if len(rooms[room_id]['players']) >= max_players:
+        return jsonify({"success": False, "message": f"房间已满({max_players}人)"})
+    
     # 检查用户名是否已被使用
     for player in rooms[room_id]['players']:
         if player['username'] == username:
@@ -46,13 +51,21 @@ def api_join_room():
     return jsonify({
         "success": True,
         "room_id": room_id,
-        "players": rooms[room_id]['players']
+        "players": rooms[room_id]['players'],
+        "max_players": max_players
     })
 
 @app.route('/api/create-room', methods=['POST'])
 def api_create_room():
     data = request.json
     username = data.get('username')
+    max_players = int(data.get('max_players', 10))
+    
+    # 验证玩家数量范围
+    if max_players < 4:
+        max_players = 4
+    elif max_players > 10:
+        max_players = 10
     
     if not username:
         return jsonify({"success": False, "message": "缺少用户名"})
@@ -68,16 +81,18 @@ def api_create_room():
             'isHost': True
         }],
         'settings': {
-            'smallBlind': 10,
-            'bigBlind': 20,
-            'initialChips': 1000
-        }
+            'smallBlind': int(data.get('small_blind', 10)),
+            'bigBlind': int(data.get('big_blind', 20)),
+            'initialChips': int(data.get('initial_chips', 1000))
+        },
+        'max_players': max_players
     }
     
     return jsonify({
         "success": True,
         "room_id": room_id,
-        "players": rooms[room_id]['players']
+        "players": rooms[room_id]['players'],
+        "max_players": max_players
     })
 
 @socketio.on('connect')
@@ -88,6 +103,13 @@ def handle_connect():
 def handle_create_room(data):
     username = data.get('username')
     avatar = data.get('avatar', 'avatar1')
+    max_players = int(data.get('max_players', 10))
+    
+    # 验证玩家数量范围
+    if max_players < 4:
+        max_players = 4
+    elif max_players > 10:
+        max_players = 10
     
     # 生成房间ID
     room_id = str(random.randint(10000, 99999))
@@ -100,17 +122,19 @@ def handle_create_room(data):
             'isHost': True
         }],
         'settings': {
-            'smallBlind': 10,
-            'bigBlind': 20,
-            'initialChips': 1000
-        }
+            'smallBlind': int(data.get('smallBlind', 10)),
+            'bigBlind': int(data.get('bigBlind', 20)),
+            'initialChips': int(data.get('initialChips', 1000))
+        },
+        'max_players': max_players
     }
     
     join_room(room_id)
     
     emit('room_created', {
         'room_id': room_id,
-        'players': rooms[room_id]['players']
+        'players': rooms[room_id]['players'],
+        'max_players': max_players
     })
 
 @socketio.on('join_room')
@@ -121,6 +145,12 @@ def handle_join_room(data):
     
     if not room_id in rooms:
         emit('error', {'message': '房间不存在'})
+        return
+    
+    # 检查房间是否已满
+    max_players = rooms[room_id].get('max_players', 10)
+    if len(rooms[room_id]['players']) >= max_players:
+        emit('error', {'message': f'房间已满({max_players}人)'})
         return
     
     # 检查用户名是否已被使用
@@ -143,12 +173,14 @@ def handle_join_room(data):
     # 通知该用户成功加入
     emit('room_joined', {
         'room_id': room_id,
-        'players': rooms[room_id]['players']
+        'players': rooms[room_id]['players'],
+        'max_players': max_players
     })
     
     # 通知房间内其他人有新玩家加入
     emit('room_update', {
-        'players': rooms[room_id]['players']
+        'players': rooms[room_id]['players'],
+        'max_players': max_players
     }, to=room_id, skip_sid=request.sid)
 
 @socketio.on('start_game')
@@ -157,6 +189,11 @@ def handle_start_game(data):
     
     if not room_id in rooms:
         emit('error', {'message': '房间不存在'})
+        return
+    
+    # 检查玩家数量是否满足最低要求
+    if len(rooms[room_id]['players']) < 4:
+        emit('error', {'message': '至少需要4名玩家才能开始游戏'})
         return
     
     emit('game_start', {}, to=room_id)
