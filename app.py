@@ -112,51 +112,27 @@ def handle_disconnect():
 @socketio.on('create_room')
 def create_room(data):
     try:
+        print(f"收到创建房间请求: {data}")
         room_id = data.get('room_id')
         username = data.get('username')
         avatar = data.get('avatar', 'avatar1')
         
-        # 验证用户名
-        if not username or len(username) < 2 or len(username) > 20:
-            emit('error', {'message': '用户名长度应在2-20个字符之间'})
-            return
-            
         # 如果没有提供房间ID，生成一个
         if not room_id:
             room_id = ''.join(random.choice(string.digits) for _ in range(6))
-            
-        # 确保房间ID不重复
-        while room_id in rooms:
-            room_id = ''.join(random.choice(string.digits) for _ in range(6))
         
-        # 获取游戏设置并转换为正确类型
-        try:
-            small_blind = int(data.get('small_blind', 10))
-            big_blind = int(data.get('big_blind', 20))
-            all_in_rounds = int(data.get('all_in_rounds', 3))
-            initial_chips = int(data.get('initial_chips', 1000))
-            
-            # 验证设置的合理性
-            if small_blind <= 0 or big_blind <= 0 or initial_chips <= 0:
-                raise ValueError("游戏设置必须为正数")
-            if big_blind < small_blind:
-                raise ValueError("大盲注必须大于等于小盲注")
-                
-        except ValueError as e:
-            emit('error', {'message': f'无效的游戏设置: {str(e)}'})
-            return
+        print(f"正在创建房间: {room_id}, 用户: {username}")
         
         # 创建新房间
         rooms[room_id] = {
             'players': [],
             'host': request.sid,
             'status': 'waiting',
-            'created_at': time.time(),
             'settings': {
-                'small_blind': small_blind,
-                'big_blind': big_blind,
-                'all_in_rounds': all_in_rounds,
-                'initial_chips': initial_chips
+                'small_blind': int(data.get('small_blind', 10)),
+                'big_blind': int(data.get('big_blind', 20)),
+                'all_in_rounds': int(data.get('all_in_rounds', 3)),
+                'initial_chips': int(data.get('initial_chips', 1000))
             }
         }
         
@@ -165,7 +141,7 @@ def create_room(data):
             'id': request.sid,
             'username': username,
             'avatar': avatar,
-            'chips': initial_chips,
+            'chips': rooms[room_id]['settings']['initial_chips'],
             'isHost': True
         }
         rooms[room_id]['players'].append(player)
@@ -176,21 +152,22 @@ def create_room(data):
         # 加入Socket.IO房间
         join_room(room_id)
         
-        # 更新房间活动时间
-        last_activity[room_id] = time.time()
-        
-        # 发送房间创建成功事件
-        emit('room_created', {
+        # 明确记录要发送的数据
+        response_data = {
             'room_id': room_id,
             'players': rooms[room_id]['players'],
             'settings': rooms[room_id]['settings']
-        })
+        }
+        print(f"发送room_created事件: {response_data}")
         
-        print(f'Room created: {room_id} by {username}')
+        # 发送房间创建成功事件
+        emit('room_created', response_data)
+        
+        print(f'房间创建成功: {room_id}, 创建者: {username}')
         
     except Exception as e:
-        print(f"Error in create_room: {str(e)}")
-        emit('error', {'message': '创建房间时发生错误'})
+        print(f"创建房间时发生错误: {str(e)}")
+        emit('error', {'message': f'创建房间时发生错误: {str(e)}'})
 
 @socketio.on('join_room')
 def join_game_room(data):
