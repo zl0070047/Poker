@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>简单连接测试</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .log { background-color: #f8f9fa; padding: 10px; height: 200px; overflow: auto; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket连接测试</h1>
+    
+    <div id="status" class="status">等待连接...</div>
+    
+    <div>
+        <button id="connect-btn">测试连接</button>
+        <button id="ping-btn">发送Ping</button>
+    </div>
+    
+    <h2>事件日志</h2>
+    <div id="log" class="log"></div>
+    
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+    <script>
+        const logElement = document.getElementById('log');
+        const statusElement = document.getElementById('status');
+        
+        function log(message) {
+            const entry = document.createElement('div');
+            entry.textContent = `${new Date().toISOString().substr(11, 8)} ${message}`;
+            logElement.appendChild(entry);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function updateStatus(message, isSuccess) {
+            statusElement.textContent = message;
+            statusElement.className = 'status ' + (isSuccess ? 'success' : 'error');
+        }
+        
+        let socket;
+        
+        function connectSocket() {
+            const socketUrl = window.location.origin;
+            log(`尝试连接到: ${socketUrl}`);
+            
+            updateStatus('正在连接...', false);
+            
+            socket = io(socketUrl, {
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                timeout: 10000
+            });
+            
+            socket.on('connect', function() {
+                log(`连接成功 (ID: ${socket.id})`);
+                updateStatus('已连接', true);
+            });
+            
+            socket.on('connection_confirmed', function(data) {
+                log(`服务器确认: ${JSON.stringify(data)}`);
+            });
+            
+            socket.on('pong_client', function(data) {
+                log(`收到PONG: ${JSON.stringify(data)}`);
+            });
+            
+            socket.on('connect_error', function(error) {
+                log(`连接错误: ${error.message}`);
+                updateStatus(`连接错误: ${error.message}`, false);
+            });
+            
+            socket.on('disconnect', function() {
+                log('连接断开');
+                updateStatus('连接已断开', false);
+            });
+            
+            socket.on('error', function(data) {
+                log(`错误: ${JSON.stringify(data)}`);
+            });
+        }
+        
+        document.getElementById('connect-btn').addEventListener('click', function() {
+            if (socket) {
+                socket.disconnect();
+            }
+            connectSocket();
+        });
+        
+        document.getElementById('ping-btn').addEventListener('click', function() {
+            if (socket && socket.connected) {
+                log('发送PING');
+                socket.emit('ping_server');
+            } else {
+                log('未连接，无法发送');
+                updateStatus('未连接，请先连接', false);
+            }
+        });
+        
+        // 自动连接
+        connectSocket();
+    </script>
+</body>
+</html>
