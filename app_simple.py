@@ -197,6 +197,16 @@ def handle_start_game(data):
         return
     
     emit('game_start', {}, to=room_id)
+   
+    // 游戏开始
+
+socket.on('game_start', function() {
+    document.getElementById('waiting-panel').style.display = 'none';
+    document.getElementById('game-screen').style.display = 'block';
+    document.getElementById('display-room-id').textContent = gameState.room;
+    
+    alert('游戏开始!');
+});
 
 @socketio.on('ping_server')
 def handle_ping():
