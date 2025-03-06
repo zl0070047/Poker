@@ -198,15 +198,98 @@ def handle_start_game(data):
     
     emit('game_start', {}, to=room_id)
    
-  #游戏开始
+   发送游戏开始事件
+        emit('game_start', {
+            'players': rooms[room_id]['players'],
+            'settings': rooms[room_id]['settings']
+        }, to=room_id)
+        
+        print(f'Game started in room {room_id}')
+        
+    except Exception as e:
+        print(f"Error in start_game: {str(e)}")
+        emit('error', {'message': '开始游戏时发生错误'})
 
-socket.on('game_start', function() {
-    document.getElementById('waiting-panel').style.display = 'none';
-    document.getElementById('game-screen').style.display = 'block';
-    document.getElementById('display-room-id').textContent = gameState.room;
-    
-    alert('游戏开始!');
-});
+# 聊天功能
+@socketio.on('chat_message')
+def handle_chat_message(data):
+    try:
+        room_id = data.get('room')
+        message = data.get('message')
+        username = data.get('username')
+        
+        if not room_id or not message or not username:
+            return
+            
+        # 检查房间是否存在
+        if room_id not in rooms:
+            emit('error', {'message': '房间不存在'})
+            return
+            
+        # 检查消息长度
+        if len(message) > 200:
+            emit('error', {'message': '消息过长，请限制在200字符以内'})
+            return
+        
+        # 过滤不适当内容（简单示例）
+        if any(word in message.lower() for word in ['脏话1', '脏话2']):
+            emit('error', {'message': '请文明聊天'}, room=request.sid)
+            return
+        
+        # 添加时间戳
+        timestamp = int(time.time() * 1000)
+        
+        # 更新房间活动时间
+        last_activity[room_id] = time.time()
+        
+        # 发送消息给房间所有人
+        emit('chat_message', {
+            'username': username,
+            'message': message,
+            'timestamp': timestamp
+        }, to=room_id)
+        
+        print(f'Chat message in room {room_id}: {username}: {message}')
+        
+    except Exception as e:
+        print(f"Error in chat_message: {str(e)}")
+
+# 处理表情动画
+@socketio.on('send_emoji')
+def handle_emoji(data):
+    try:
+        room_id = data.get('room')
+        emoji = data.get('emoji')
+        username = data.get('username')
+        
+        if not room_id or not emoji or not username:
+            return
+            
+        # 检查房间是否存在
+        if room_id not in rooms:
+            return
+            
+        # 验证emoji是否在允许列表中
+        allowed_emojis = ['😀', '😎', '🤔', '😂', '👍', '👎', '🎲', '🎯', '🎰', '💰', '💸', '🤑']
+        if emoji not in allowed_emojis:
+            return
+        
+        # 更新房间活动时间
+        last_activity[room_id] = time.time()
+        
+        # 发送表情给房间所有人
+        emit('emoji_animation', {
+            'username': username,
+            'emoji': emoji
+        }, to=room_id)
+        
+    except Exception as e:
+        print(f"Error in send_emoji: {str(e)}")
+
+# 心跳检测，保持连接活跃
+@socketio.on('ping')
+def handle_ping():
+    emit('pong')
 
 @socketio.on('ping_server')
 def handle_ping():
